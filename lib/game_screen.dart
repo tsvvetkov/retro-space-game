@@ -30,13 +30,13 @@ class _GameScreenState extends State<GameScreen> {
       }
 
       // Пробел - проверяем напрямую через HardwareKeyboard
-      if (HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.space)) {
+      if (HardwareKeyboard.instance.logicalKeysPressed.contains((LogicalKeyboardKey.space)) {
         gameState.shoot();
       }
 
       // Проверяем стрелки через RawKeyboard напрямую
-      final leftArrowPressed = HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.arrowLeft);
-      final rightArrowPressed = HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.arrowRight);
+      final leftArrowPressed = HardwareKeyboard.instance.logicalKeysPressed.contains((LogicalKeyboardKey.arrowLeft);
+      final rightArrowPressed = HardwareKeyboard.instance.logicalKeysPressed.contains((LogicalKeyboardKey.arrowRight);
 
       if (rightArrowPressed && !leftArrowPressed) {
         gameState.player.moveRight();
@@ -69,8 +69,8 @@ class _GameScreenState extends State<GameScreen> {
       }
 
       // Проверяем стрелки через RawKeyboard напрямую
-      final leftArrowPressed = HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.arrowLeft);
-      final rightArrowPressed = HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.arrowRight);
+      final leftArrowPressed = HardwareKeyboard.instance.logicalKeysPressed.contains((LogicalKeyboardKey.arrowLeft);
+      final rightArrowPressed = HardwareKeyboard.instance.logicalKeysPressed.contains((LogicalKeyboardKey.arrowRight);
 
       if (rightArrowPressed && !leftArrowPressed) {
         gameState.player.moveRight();
