@@ -30,13 +30,13 @@ class _GameScreenState extends State<GameScreen> {
       }
 
       // Пробел - проверяем напрямую через HardwareKeyboard
-      if (HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.space)) {
+      if (HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.space)) {
         gameState.shoot();
       }
 
       // Проверяем стрелки через RawKeyboard напрямую
-      final leftArrowPressed = HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.arrowLeft);
-      final rightArrowPressed = HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.arrowRight);
+      final leftArrowPressed = HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.arrowLeft);
+      final rightArrowPressed = HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.arrowRight);
 
       if (rightArrowPressed && !leftArrowPressed) {
         gameState.player.moveRight();
@@ -69,8 +69,8 @@ class _GameScreenState extends State<GameScreen> {
       }
 
       // Проверяем стрелки через RawKeyboard напрямую
-      final leftArrowPressed = HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.arrowLeft);
-      final rightArrowPressed = HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.arrowRight);
+      final leftArrowPressed = HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.arrowLeft);
+      final rightArrowPressed = HardwareKeyboard.instance.isLogicalKeyPressed(LogicalKeyboardKey.arrowRight);
 
       if (rightArrowPressed && !leftArrowPressed) {
         gameState.player.moveRight();
@@ -155,7 +155,16 @@ class GameState {
 
   void shoot() {
     if (player.lastShot < player.fireRate) return;
-    bullets.add(Bullet(player.x, player.y - 20));
+
+    if (player.tripleShot) {
+      // Вилка из 3 пуль
+      bullets.add(Bullet(player.x - 8, player.y - 20));
+      bullets.add(Bullet(player.x, player.y - 20));
+      bullets.add(Bullet(player.x + 8, player.y - 20));
+    } else {
+      // Одна пуля
+      bullets.add(Bullet(player.x, player.y - 20));
+    }
     player.lastShot = 0;
   }
 
@@ -228,6 +237,9 @@ class GameState {
 
     for (var bonus in bonuses.toList()) {
       if (_checkCollisionRect(player, bonus)) {
+        // Создаём вспышку и радужные звёзды при сборе бонуса
+        _createBonusCollectAnimation(bonus.x + 15, bonus.y + 15);
+
         // Если аптечка - добавляем 10 здоровья
         if (bonus.type == 'medkit') {
           health = math.min(100, health + 10);
@@ -313,6 +325,31 @@ class GameState {
     }
   }
 
+  void _createBonusCollectAnimation(double x, double y) {
+    // Радужные звёзды которые летят к корабль
+    final colors = [
+      const Color(0xFFFF0000), // Красная
+      const Color(0xFFFFFF00), // Жёлтая
+      const Color(0xFF00FF00), // Зелёная
+      const Color(0xFF00FFFF), // Голубая
+      const Color(0xFF7700FF), // Фиолетовая
+    ];
+
+    for (int i = 0; i < 12; i++) {
+      final angle = (2 * math.pi * i) / 12;
+      // Летят к корабль со случайной скоростью
+      final speed = 100 + math.Random().nextDouble() * 100;
+      final particle = Particle(
+        x,
+        y,
+        math.cos(angle) * speed,
+        math.sin(angle) * speed,
+      );
+      particle.color = colors[i % colors.length];
+      particles.add(particle);
+    }
+  }
+
   void _spawnEnemy() {
     final type = random.nextInt(100);
     late EnemyType enemyType;
@@ -352,13 +389,19 @@ class Player {
   double lastShot = 0.15;
   double bulletSize = 1.0;
   Color bulletColor = const Color(0xFF00FFFF);
+  bool tripleShot = false; // Для множественных пуль
+  double tripleShotEndTime = 0; // Когда кончится эффект
 
   Player(this.x, this.y);
 
   void update() {
     lastShot += 0.03;
-    // Используем доступную ширину экрана вместо жёстких значений
-    x = x.clamp(30, 800 - 30); // Увеличил до 800 для браузера
+    x = x.clamp(30, 800 - 30);
+
+    // Отслеживаем окончание бонуса tripleShot
+    if (tripleShot && DateTime.now().millisecondsSinceEpoch > tripleShotEndTime) {
+      tripleShot = false;
+    }
   }
 
   void moveLeft() {
@@ -429,10 +472,17 @@ class Bullet {
   double x;
   double y;
   double speed = 10800;
+  List<Offset> trail = []; // Для тонкого следа
 
   Bullet(this.x, this.y);
 
   void update() {
+    // Добавляем текущую позицию в тройл
+    trail.add(Offset(x, y));
+    if (trail.length > 15) {
+      trail.removeAt(0); // Ограничиваем длину трейла
+    }
+
     y -= speed * 0.03 / 100;
   }
 }
@@ -446,10 +496,11 @@ class Bonus {
 
   Bonus(this.x, this.y) {
     final random = math.Random();
-    final types = ['medkit', 'purple_bullets'];
-    // 60% - аптечка, 20% - фиолетовые пули
+    // 50% - fast_shot, 30% - medkit, 20% - purple_bullets
     final rand = random.nextDouble();
-    if (rand < 0.6) {
+    if (rand < 0.5) {
+      type = 'fast_shot';
+    } else if (rand < 0.8) {
       type = 'medkit';
     } else {
       type = 'purple_bullets';
@@ -460,7 +511,7 @@ class Bonus {
     // Падают вниз очень медленно
     y += speed / 100;
 
-    // Сразу двигаются к кораблю по прямой линии
+    // Сразу движутся к корабль по прямой линии
     final dx = gameState.player.x - x;
     final dy = gameState.player.y - y;
     final distance = math.sqrt(dx * dx + dy * dy);
@@ -475,16 +526,11 @@ class Bonus {
   void apply(GameState game) {
     switch (type) {
       case 'fast_shot':
-        game.player.fireRate = (game.player.fireRate * 0.5).clamp(0.01, game.player.fireRate);
-        break;
-      case 'thick_bullet':
-        game.player.bulletSize = 1.5;
-        Future.delayed(const Duration(seconds: 5), () {
-          game.player.bulletSize = 1.0;
+      // Быстрая стрельба на 8 секунд
+        game.player.fireRate = 0.05; // Очень частая стрельба
+        Future.delayed(const Duration(seconds: 8), () {
+          game.player.fireRate = 0.15; // Вернуть стандартную
         });
-        break;
-      case 'health':
-        game.health = 100;
         break;
       case 'medkit':
       // Аптечка даёт 10 здоровья
@@ -495,9 +541,12 @@ class Bonus {
         game.player.bulletSize = 2.0;
         game.player.fireRate = (game.player.fireRate * 0.3).clamp(0.01, game.player.fireRate);
         game.player.bulletColor = const Color(0xFF7700FF);
+        game.player.tripleShot = true;
+        game.player.tripleShotEndTime = DateTime.now().millisecondsSinceEpoch + 10000;
         Future.delayed(const Duration(seconds: 10), () {
           game.player.bulletSize = 1.0;
           game.player.bulletColor = const Color(0xFF00FFFF);
+          game.player.tripleShot = false;
         });
         break;
     }
@@ -604,6 +653,20 @@ class GamePainter extends CustomPainter {
     }
 
     for (var bullet in gameState.bullets) {
+      // Тонкий след за пулей
+      if (bullet.trail.length > 1) {
+        for (int i = 0; i < bullet.trail.length - 1; i++) {
+          final opacity = (i / bullet.trail.length) * 0.6;
+          canvas.drawLine(
+            bullet.trail[i],
+            bullet.trail[i + 1],
+            Paint()
+              ..color = gameState.player.bulletColor.withOpacity(opacity)
+              ..strokeWidth = 0.5,
+          );
+        }
+      }
+
       // Гладкая пуля - закругленная форма
       final paint = Paint()..color = gameState.player.bulletColor;
       // Острый конец спереди
@@ -968,10 +1031,10 @@ class GamePainter extends CustomPainter {
 
     switch (bonus.type) {
       case 'fast_shot':
-      // Молния - жёлтая
+      // Молния - жёлтая (быстрая стрельба)
         final pathPaint = Paint()
           ..color = const Color(0xFFFFFF00)
-          ..strokeWidth = 2
+          ..strokeWidth = 2.5
           ..strokeCap = StrokeCap.round;
         final path = Path()
           ..moveTo(-5, -8)
@@ -980,25 +1043,6 @@ class GamePainter extends CustomPainter {
           ..lineTo(0, 5)
           ..close();
         canvas.drawPath(path, pathPaint);
-        break;
-      case 'thick_bullet':
-      // Коробка - фиолетовая
-        final boxPaint = Paint()..color = const Color(0xFF7700FF);
-        canvas.drawRect(Rect.fromLTWH(-6, -6, 12, 12), boxPaint);
-        canvas.drawRect(Rect.fromLTWH(-4, -4, 8, 8), Paint()
-          ..color = const Color(0xFF0a0e27)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1);
-        break;
-      case 'health':
-      // Зелёный крест - здоровье
-        final crossPaint = Paint()
-          ..color = const Color(0xFF00FF00)
-          ..strokeWidth = 2;
-        canvas.drawLine(const Offset(-2, -6), const Offset(-2, 6), crossPaint);
-        canvas.drawLine(const Offset(2, -6), const Offset(2, 6), crossPaint);
-        canvas.drawLine(const Offset(-6, -2), const Offset(6, -2), crossPaint);
-        canvas.drawLine(const Offset(-6, 2), const Offset(6, 2), crossPaint);
         break;
       case 'medkit':
       // Аптечка - белый крест на красном фоне
@@ -1062,21 +1106,46 @@ class GamePainter extends CustomPainter {
     textPainter.layout();
     textPainter.paint(canvas, const Offset(20, 20));
 
-    // Health отдельно, другим цветом
-    final healthPainter = TextPainter(
-      text: TextSpan(
-        text: 'Health: ${gameState.health}',
-        style: const TextStyle(
-          color: Color(0xFFFF3333),
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'monospace',
-        ),
+    // Health полоска вместо текста
+    const healthBarWidth = 220.0;
+    const healthBarHeight = 15.0;
+    final healthPercentage = gameState.health / 100;
+
+    // Фон полоски
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(20, 50, healthBarWidth, healthBarHeight),
+        const Radius.circular(3),
       ),
-      textDirection: TextDirection.ltr,
+      Paint()..color = const Color(0xFF333333),
     );
-    healthPainter.layout();
-    healthPainter.paint(canvas, const Offset(20, 50));
+
+    // Сама полоска - красная если мало здоровья
+    final healthColor = gameState.health > 50
+        ? const Color(0xFF00FF00)
+        : gameState.health > 20
+        ? const Color(0xFFFFFF00)
+        : const Color(0xFFFF0000);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(20, 50, healthBarWidth * healthPercentage, healthBarHeight),
+        const Radius.circular(3),
+      ),
+      Paint()..color = healthColor,
+    );
+
+    // Обводка полоски
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(20, 50, healthBarWidth, healthBarHeight),
+        const Radius.circular(3),
+      ),
+      Paint()
+        ..color = healthColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
   }
 
   void _drawGameOver(Canvas canvas, Size size) {
