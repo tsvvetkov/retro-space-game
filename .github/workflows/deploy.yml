@@ -26,7 +26,7 @@ jobs:
         run: flutter pub get
 
       - name: Build web app
-        run: flutter build web --release --base-href /retro-space-game/
+        run: flutter build web --release --base-href "/retro-space-game/"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -36,3 +36,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        publish_dir: ./build/web
