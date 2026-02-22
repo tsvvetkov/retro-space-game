@@ -21,6 +21,12 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
+
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+      overlays: [SystemUiOverlay.bottom],
+    );
+
     focusNode = FocusNode();
     gameState = GameState();
     gameTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
