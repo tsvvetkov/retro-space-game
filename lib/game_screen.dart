@@ -1074,6 +1074,8 @@ class GamePainter extends CustomPainter {
   }
 
   void _drawHUD(Canvas canvas, Size size) {
+    const double topPadding = 50.0;  // ← Отступ сверху
+
     // Полупрозрачный фон для HUD
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -1087,7 +1089,7 @@ class GamePainter extends CustomPainter {
     // Обводка
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(10, 10, 250, 80),
+        Rect.fromLTWH(10, topPadding, 250, 80),
         const Radius.circular(5),
       ),
       Paint()
@@ -1110,7 +1112,7 @@ class GamePainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();
-    textPainter.paint(canvas, const Offset(20, 20));
+    textPainter.paint(canvas, const Offset(20, topPadding + 10));
 
     // Health полоска вместо текста
     const healthBarWidth = 220.0;
@@ -1120,7 +1122,7 @@ class GamePainter extends CustomPainter {
     // Фон полоски
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        const Rect.fromLTWH(20, 50, healthBarWidth, healthBarHeight),
+        const Rect.fromLTWH(20, topPadding + 40, healthBarWidth, healthBarHeight),
         const Radius.circular(3),
       ),
       Paint()..color = const Color(0xFF333333),
@@ -1135,7 +1137,7 @@ class GamePainter extends CustomPainter {
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(20, 50, healthBarWidth * healthPercentage, healthBarHeight),
+        Rect.fromLTWH(20, topPadding + 40, healthBarWidth * healthPercentage, healthBarHeight),
         const Radius.circular(3),
       ),
       Paint()..color = healthColor,
@@ -1144,7 +1146,7 @@ class GamePainter extends CustomPainter {
     // Обводка полоски
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        const Rect.fromLTWH(20, 50, healthBarWidth, healthBarHeight),
+        const Rect.fromLTWH(20, topPadding + 40, healthBarWidth, healthBarHeight),
         const Radius.circular(3),
       ),
       Paint()
