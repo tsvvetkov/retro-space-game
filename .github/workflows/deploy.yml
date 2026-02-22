@@ -42,3 +42,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/web
           cname: tsvvetkov.github.io
+          force_orphan: true
