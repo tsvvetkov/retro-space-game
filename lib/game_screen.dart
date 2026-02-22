@@ -1079,7 +1079,7 @@ class GamePainter extends CustomPainter {
     // Полупрозрачный фон для HUD
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(10, 10, 250, 80),
+        Rect.fromLTWH(10, topPadding, 250, 80),
         const Radius.circular(5),
       ),
       Paint()
