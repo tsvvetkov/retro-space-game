@@ -1,0 +1,1 @@
+:  /Users/d.tsvetkov/StudioProjects/retro_space_game/web/index.html
